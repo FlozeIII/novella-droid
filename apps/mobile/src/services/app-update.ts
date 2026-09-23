@@ -1,7 +1,7 @@
 const LATEST_RELEASE_URL =
-  'https://api.github.com/repos/celia-sh/Novella/releases/latest';
+  'https://api.github.com/repos/FlozeIII/novella-droid/releases/latest';
 
-const RELEASE_URL_PREFIX = '/celia-sh/Novella/releases/';
+const RELEASE_URL_PREFIX = '/FlozeIII/novella-droid/releases/';
 const VERSION_PATTERN =
   /^[vV]?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 

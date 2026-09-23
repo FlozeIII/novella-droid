@@ -61,7 +61,7 @@ function resolveLocalCompatibilityVersion(): string {
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Novella',
+  name: 'Novella Droid',
   slug: 'novella',
   // CI release tags override this; local and untagged builds use the newest
   // stable release tag reachable from the current commit.
@@ -162,13 +162,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-sharing',
   ],
   extra: {
+    // 后台只认 User-Agent 里的名字与版本，且会拒掉版本过低的客户端。这两个是钉死的
+    // 「后台兼容身份」，与本改版自己的 name/version 解耦——本改版改名或使用自己的
+    // 版本号，都不会让后台看到一个陌生或过时的客户端。
+    // backendVersion 必须跟随上游 celia-sh/Novella 的 release 线手动更新（上游当前最新 v2.5.0）。
+    backendName: 'Novella',
+    backendVersion: '2.4.0',
     // 运行时经 Constants.expoConfig.extra 读取，设置页展示构建渠道与标签。
     buildChannel: process.env.APP_BUILD_CHANNEL ?? 'local',
     buildLabel: process.env.APP_BUILD_LABEL ?? '',
   },
   ios: {
-    bundleIdentifier: 'sh.celia.novella',
-    // CI 注入 BUILD_NUMBER（git rev-list --count，单调递增）。
+    // 与 android.package 保持一致（见上方包名说明）。
+    bundleIdentifier: 'sh.celia.novella.droid',
+    // 发布流程注入 BUILD_NUMBER（git rev-list --count，单调递增）；未注入时回退为 1。
     buildNumber: buildNumber ?? '1',
     supportsTablet: true,
     // Icon Composer (iOS 26 Liquid Glass) 图标,覆盖顶层 icon。
@@ -183,8 +190,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
-    package: 'sh.celia.novella',
-    // CI 注入 versionCode（git rev-list --count，单调递增）。
+    // 与上游 celia-sh/Novella 的包名区分：本仓库是其 Android 移植修改版，
+    // 用它自己的包名发布，避免与上游身份混淆或将来撞车。
+    package: 'sh.celia.novella.droid',
+    // 发布流程注入 versionCode（git rev-list --count，单调递增）；未注入时回退为 1。
     versionCode: Number(buildNumber ?? '1'),
     // adaptive icon 前景/背景，用现有 splash logo 作为前景图。
     adaptiveIcon: {

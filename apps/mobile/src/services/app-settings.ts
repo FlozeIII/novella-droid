@@ -1,10 +1,5 @@
 import type { RankPeriod } from '@novella/client-core';
 
-import {
-  isAppUpdateDestination,
-  type AppUpdateDestination,
-} from './app-update-destination.ts';
-
 import type { AppLanguage } from '../localization/locale.ts';
 import { decodeAppLanguage } from '../localization/locale.ts';
 import {
@@ -80,7 +75,6 @@ export interface AppSettings {
   theme: ThemeMode;
   convertType: TranslationMode;
   autoCheckUpdate: boolean;
-  updateLinkDestination: AppUpdateDestination;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -113,7 +107,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   convertType: 'none',
   autoCheckUpdate: true,
-  updateLinkDestination: 'github',
 };
 
 /**
@@ -228,9 +221,6 @@ export function decodeAppSettings(value: unknown): AppSettings {
       : {}),
     ...(typeof candidate.autoCheckUpdate === 'boolean'
       ? { autoCheckUpdate: candidate.autoCheckUpdate }
-      : {}),
-    ...(isAppUpdateDestination(candidate.updateLinkDestination)
-      ? { updateLinkDestination: candidate.updateLinkDestination }
       : {}),
   };
 }

@@ -21,7 +21,7 @@ test('update check returns the GitHub release URL without consuming release note
       requestedUrl = String(url);
       return new Response(JSON.stringify({
         body: 'This content must not be surfaced by the app.',
-        html_url: 'https://github.com/celia-sh/Novella/releases/tag/v1.10.0',
+        html_url: 'https://github.com/FlozeIII/novella-droid/releases/tag/v1.10.0',
         tag_name: 'v1.10.0',
       }), { status: 200 });
     },
@@ -29,19 +29,19 @@ test('update check returns the GitHub release URL without consuming release note
 
   assert.equal(
     requestedUrl,
-    'https://api.github.com/repos/celia-sh/Novella/releases/latest',
+    'https://api.github.com/repos/FlozeIII/novella-droid/releases/latest',
   );
   assert.deepEqual(result, {
     currentVersion: '1.9.0',
     latestVersion: '1.10.0',
-    releaseUrl: 'https://github.com/celia-sh/Novella/releases/tag/v1.10.0',
+    releaseUrl: 'https://github.com/FlozeIII/novella-droid/releases/tag/v1.10.0',
     status: 'available',
   });
 });
 
 test('update check treats equal or newer local builds as current', async () => {
   const fetchImpl = async () => new Response(JSON.stringify({
-    html_url: 'https://github.com/celia-sh/Novella/releases/tag/v1.10.0',
+    html_url: 'https://github.com/FlozeIII/novella-droid/releases/tag/v1.10.0',
     tag_name: 'v1.10.0',
   }), { status: 200 });
 

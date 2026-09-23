@@ -406,10 +406,21 @@ export function createExpoStorage(): KeyValueStore {
   return new ExpoKeyValueStore();
 }
 
+/**
+ * The User-Agent the backend identifies the client by. Both halves are taken from
+ * the pinned `extra.backend*` values rather than the app's own name and version,
+ * so this fork can rename itself and carry its own version number without
+ * presenting itself to the backend as a different or out-of-date client.
+ */
 export function getBackendUserAgent(): string {
-  const appName = Constants.expoConfig?.name?.trim() || 'Novella';
+  const appName =
+    Constants.expoConfig?.extra?.backendName?.trim() ||
+    Constants.expoConfig?.name?.trim() ||
+    'Novella';
   const normalizedName = appName.replace(/\s+/g, '-');
-  const version = Constants.expoConfig?.version?.trim();
+  const version =
+    Constants.expoConfig?.extra?.backendVersion?.trim() ||
+    Constants.expoConfig?.version?.trim();
   return version ? `${normalizedName}/${version}` : normalizedName;
 }
 

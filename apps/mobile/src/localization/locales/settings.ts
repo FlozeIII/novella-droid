@@ -192,7 +192,7 @@ export const zhCNSettings = {
     },
   },
   about: {
-    title: '关于 Novella',
+    title: '关于 Novella Droid',
     sections: {
       app: '本应用',
       externalLinks: '外部链接',
@@ -205,8 +205,6 @@ export const zhCNSettings = {
     changelogsTitle: '更新日志',
     changelogsDescription: '在 GitHub 查看版本说明',
     externalLinks: {
-      sideloadTitle: '侧载',
-      sideloadDescription: 'sideload.celia.sh',
       lightNovelShelfTitle: '轻书架',
       lightNovelShelfDescription: 'www.lightnovel.app',
       lightNovelGroupTitle: '轻书架留学生',
@@ -217,27 +215,16 @@ export const zhCNSettings = {
     update: {
       checkTitle: '检测更新',
       checkDescription: '启动时检查 GitHub 最新版本',
-      destinationTitle: '更新打开方式',
-      destinationDescription: '发现新版本后打开的应用或页面',
-      destinations: {
-        github: 'GitHub',
-        altstore: 'AltStore',
-        sidestore: 'SideStore',
-        feather: 'Feather',
-      },
       availableTitle: '检测到新版本',
       availableMessage: '要更新吗？',
       cancel: '暂不',
       openGitHub: '打开 GitHub',
-      openAltStore: '打开 AltStore',
-      openSideStore: '打开 SideStore',
-      openFeather: '打开 Feather',
       currentTitle: '无需操作',
       currentMessage: '当前安装的版本已经是最新版本。',
       failedTitle: '无法检查更新',
       failedMessage: '请检查网络连接后重试。',
       openFailedTitle: '无法打开更新链接',
-      openFailedMessage: '请稍后重试，或在设置中选择其他打开方式。',
+      openFailedMessage: '请稍后重试。',
     },
   },
   profile: {
@@ -618,7 +605,7 @@ export const zhTWSettings: TranslationShape<typeof zhCNSettings> = {
     },
   },
   about: {
-    title: '關於 Novella',
+    title: '關於 Novella Droid',
     sections: {
       app: '本應用程式',
       externalLinks: '外部連結',
@@ -631,8 +618,6 @@ export const zhTWSettings: TranslationShape<typeof zhCNSettings> = {
     changelogsTitle: '版本資訊',
     changelogsDescription: '在 GitHub 查看版本說明',
     externalLinks: {
-      sideloadTitle: '側載',
-      sideloadDescription: 'sideload.celia.sh',
       lightNovelShelfTitle: '輕書架',
       lightNovelShelfDescription: 'www.lightnovel.app',
       lightNovelGroupTitle: '輕書架留學生',
@@ -643,27 +628,16 @@ export const zhTWSettings: TranslationShape<typeof zhCNSettings> = {
     update: {
       checkTitle: '檢查更新',
       checkDescription: '啟動時檢查 GitHub 最新版本',
-      destinationTitle: '更新開啟方式',
-      destinationDescription: '發現新版本後開啟的應用程式或頁面',
-      destinations: {
-        github: 'GitHub',
-        altstore: 'AltStore',
-        sidestore: 'SideStore',
-        feather: 'Feather',
-      },
       availableTitle: '偵測到新版本',
       availableMessage: '要更新嗎？',
       cancel: '暫不',
       openGitHub: '開啟 GitHub',
-      openAltStore: '開啟 AltStore',
-      openSideStore: '開啟 SideStore',
-      openFeather: '開啟 Feather',
       currentTitle: '無需操作',
       currentMessage: '目前安裝的版本已是最新版本。',
       failedTitle: '無法檢查更新',
       failedMessage: '請檢查網路連線後再試一次。',
       openFailedTitle: '無法開啟更新連結',
-      openFailedMessage: '請稍後再試一次，或在設定中選擇其他開啟方式。',
+      openFailedMessage: '請稍後再試一次。',
     },
   },
   profile: {

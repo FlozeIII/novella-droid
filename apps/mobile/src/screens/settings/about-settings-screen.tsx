@@ -4,13 +4,11 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { NativeGroupedList, NativeGroupedListRow, NativeGroupedListSection } from '@/components/native-grouped-list';
-import { NativePickerRow, NativeToggleRow, NativeValueRow } from '@/components/native-setting-controls';
-import { APP_UPDATE_DESTINATIONS } from '@/services/app-update-destination';
+import { NativeToggleRow, NativeValueRow } from '@/components/native-setting-controls';
 import { runManualAppUpdateCheck } from '@/services/app-update-alerts';
 import { updateAppSettings, useAppSettings } from '@/services/settings';
 
-const repositoryUrl = 'https://github.com/celia-sh/Novella';
-const sideloadUrl = 'https://sideload.celia.sh';
+const repositoryUrl = 'https://github.com/FlozeIII/novella-droid';
 const lightNovelShelfUrl = 'https://www.lightnovel.app';
 const lightNovelGroupUrl = 'https://t.me/+zD4ACGdOROs3MmI1';
 const developerGroupUrl = 'https://t.me/+rZYx8H_TvUpmZjJh';
@@ -58,17 +56,6 @@ export function AboutSettingsScreen() {
           title={t('about.update.checkTitle')}
           value={settings.autoCheckUpdate}
         />
-        <NativePickerRow
-          description={t('about.update.destinationDescription')}
-          icon="sideload"
-          onValueChange={(value) => void updateAppSettings({ updateLinkDestination: value })}
-          options={APP_UPDATE_DESTINATIONS.map((value) => ({
-            label: t(`about.update.destinations.${value}`),
-            value,
-          }))}
-          selectedValue={settings.updateLinkDestination}
-          title={t('about.update.destinationTitle')}
-        />
         <NativeGroupedListRow
           description={t('about.sourceDescription')}
           icon="sourceCode"
@@ -83,12 +70,6 @@ export function AboutSettingsScreen() {
         />
       </NativeGroupedListSection>
       <NativeGroupedListSection title={t('about.sections.externalLinks')}>
-        <NativeGroupedListRow
-          description={t('about.externalLinks.sideloadDescription')}
-          icon="sideload"
-          onPress={() => void Linking.openURL(sideloadUrl)}
-          title={t('about.externalLinks.sideloadTitle')}
-        />
         <NativeGroupedListRow
           description={t('about.externalLinks.lightNovelShelfDescription')}
           icon="books"

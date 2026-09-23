@@ -83,15 +83,43 @@ npx expo run:android
 
 注意：`prebuild --clean` 会重建原生工程，尚未迁移到 Expo Module 或 Config Plugin 的手动原生修改会被覆盖，请勿将其保留在生成目录中。**Android 侧尤其如此**——`apps/mobile/android/` 已 gitignore，所有原生配置都必须写进 `apps/mobile/plugins/` 的 Config Plugin。
 
-### Android 发布构建
+### 发布（Android 测试版）
 
-release 变体使用正式密钥签名，密钥库位于 `apps/mobile/.keystore/release.keystore`（已 gitignore），密码从环境变量 `NOVELLA_KEYSTORE_PASSWORD` 读取、不入库：
+release 变体使用正式密钥签名，密钥库位于 `apps/mobile/.keystore/release.keystore`（已 gitignore），密码从环境变量 `NOVELLA_KEYSTORE_PASSWORD` 读取、不入库。
+
+**发布时必须注入版本环境变量**，否则 `versionCode` 会回落为 `1`——第一个包能装，第二个会被 Android 拒装（同 `versionCode` 无法覆盖升级）：
 
 ```bash
+cd apps/mobile
 export NOVELLA_KEYSTORE_PASSWORD='<密码>'
-cd apps/mobile/android
-./gradlew assembleRelease
+export APP_BUILD_NUMBER="$(git rev-list --count HEAD)"   # versionCode，单调递增
+export APP_VERSION="0.0.1"                                # 本改版自己的版本号
+export APP_BUILD_CHANNEL="beta" APP_BUILD_LABEL="beta.1"  # 设置页展示用
+
+npx expo prebuild --clean --platform android --no-install
+cd android && ./gradlew assembleRelease
 ```
+
+**`APP_VERSION` 是本改版自己的版本号，与后台无关。** 后台只认 `User-Agent`，而 UA 取的是 `app.config.ts` 里钉死的 `extra.backendName` / `extra.backendVersion`（当前 `Novella/2.4.0`），见 `src/adapters/expo-runtime.ts` 的 `getBackendUserAgent()`。所以这里可以自由使用 `0.0.x`，不会触发后台的「客户端版本过低」而登录失败。
+
+> ⚠️ `extra.backendVersion` 必须**手动跟随上游 [celia-sh/Novella](https://github.com/celia-sh/Novella) 的 release 线**（本仓库从 v2.4.0 fork，上游已发 v2.5.0）。若后台门槛上移，这个值不跟着改就会登录失败。
+
+发布前核对 APK（包名 / versionCode / versionName / 签名）：
+
+```bash
+APK=apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+"$ANDROID_HOME/build-tools/36.1.0/aapt2" dump badging "$APK" | head -3
+"$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --print-certs "$APK"
+```
+
+然后打 tag 并创建 GitHub Release（预发布）：
+
+```bash
+git tag v0.0.1 && git push origin v0.0.1
+gh release create v0.0.1 "$APK" --prerelease --title "..." --notes "..."
+```
+
+**Release notes 应写明**：这是 [celia-sh/Novella](https://github.com/celia-sh/Novella) 的 Android 移植修改版（AGPL-3.0）、侧载安装方式、已知限制（`targetSdk` 34、仅 `arm64-v8a`、功能回归覆盖程度）、以及上游链接。
 
 > ⚠️ 该密钥库是已发布应用的签名身份，**丢失后无法再推送更新**。仓库外必须单独备份，并保存密码与证书指纹以便校验恢复的是正确的密钥。
 
