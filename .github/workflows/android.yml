@@ -18,12 +18,22 @@ name: Android build
 #   NOVELLA_KEYSTORE_PASSWORD as secrets; debug signs with the template's
 #   generated debug.keystore, so this needs no secrets at all.
 
+# Docs-only changes are skipped: this job costs ~30 minutes and nothing in it
+# depends on Markdown. validate.yml is deliberately left unfiltered, so make
+# that the required check if branch protection is ever enabled -- a required
+# check that paths-ignore skips leaves pull requests pending forever.
 on:
   workflow_dispatch:
   pull_request:
     branches: ["main"]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
   push:
     branches: ["main"]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
 
 permissions:
   contents: read
