@@ -37,3 +37,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# release signing key — must never be committed
+.keystore/

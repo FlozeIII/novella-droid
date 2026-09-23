@@ -145,12 +145,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           // Android 原生编译配置，后续可根据需要开启 NDK ccache 等。
           // Readium Android (readium-kotlin-toolkit) 通过本地 Expo Module
           // 的 build.gradle 依赖引入，无需在此声明 extraMavenRepositories。
-          compileSdkVersion: 35,
-          targetSdkVersion: 35,
-          buildToolsVersion: '35.0.0',
+          // 与 gradle.properties 实测可构建的 SDK 版本对齐。
+          compileSdkVersion: 36,
+          // targetSdk 34 刻意低于 compileSdk 36（原因未留档，勿随意调高）。
+          targetSdkVersion: 34,
+          buildToolsVersion: '36.1.0',
         },
       },
     ],
+    // Android-only: reproduce the hand-edits that previously lived only in the
+    // gitignored android/ directory, so `expo prebuild --clean` restores them.
+    './plugins/with-android-gradle-wrapper',
+    './plugins/with-android-build-gradle',
+    './plugins/with-android-app-build-gradle',
+    './plugins/with-android-gradle-properties',
     'expo-sharing',
   ],
   extra: {
