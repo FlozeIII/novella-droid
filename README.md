@@ -119,7 +119,7 @@ cd apps/mobile/android
 - `.github/workflows/validate.yml` — 边界检查、类型检查与单元测试
 - `.github/workflows/android.yml` — **从零 `prebuild --clean` 重建 Android 原生工程并编译 debug APK**，同时断言各 Config Plugin 确实生效
 
-注意：Android 工作流在 **Linux** 上运行，因此无法覆盖上面那条 Windows MAX_PATH 行为——它验证的是移植配置的正确性与可构建性。
+注意：Android 工作流在 **Linux** 上运行。`CMAKE_OBJECT_PATH_MAX` 在 Linux 上同样生效，日志里也会出现同样的 "cannot be safely placed under this directory" 警告——差别只在 Linux 没有 260 字符路径上限，所以它止步于警告而非构建失败。因此该工作流验证的是「配置被正确应用且原生工程确实可构建」，而非 Windows 上的路径长度行为。
 
 ## 质量门槛
 

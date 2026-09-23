@@ -6,9 +6,11 @@ name: Android build
 # next run `expo prebuild`.
 #
 # Caveats worth knowing before relying on this job:
-# - The Windows MAX_PATH fix (CMAKE_OBJECT_PATH_MAX) cannot be exercised on
-#   Linux; this verifies plugin correctness and buildability, not path-length
-#   behaviour on Windows.
+# - The Windows MAX_PATH fix (CMAKE_OBJECT_PATH_MAX) is applied here too, and
+#   Linux logs the same "cannot be safely placed under this directory" warning
+#   for the codegen object dirs. It stays a warning rather than a hard failure
+#   because Linux has no 260-char path limit, so this verifies that the setting
+#   is applied and that the tree builds -- not Windows' path-length behaviour.
 # - The Aliyun/Tencent mirrors are injected by the plugins and therefore really
 #   are used here, which doubles as a check that the injection landed. If they
 #   ever prove slow or flaky from GitHub's runners, gate them behind an env var.
@@ -34,9 +36,11 @@ jobs:
   android:
     name: Prebuild and assemble debug APK
     runs-on: ubuntu-latest
-    # A cold build runs ~10 min locally; give plenty of headroom for a cold
-    # Gradle/NDK download on a fresh runner.
-    timeout-minutes: 30
+    # A cold build on a 2-core runner exceeded 30 minutes on its first run --
+    # it was still compiling native code, with no errors. The Gradle cache
+    # populated by a successful run makes later runs much faster, but this job
+    # is on the critical path of a first-time contributor, so keep headroom.
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
