@@ -104,8 +104,20 @@ class NovellaReadiumView(context: Context, appContext: AppContext) : ExpoView(co
   private var lastBoundaryEventAt = 0L
 
   /**
-   * Progression of the most recently reported locator. Used to decide whether a drag is
-   * asking to leave the chapter, since 3.1.0 exposes no scroll-offset query.
+   * Position the navigator was at when the current drag began, so that a drag ending where
+   * it started can be recognised as one that ran into the chapter's edge.
+   */
+  private var locatorAtDragStart: String? = null
+
+  /**
+   * Progression of the most recently reported locator.
+   *
+   * Kept only to gate the drag boundary: this navigator does not turn pages on a swipe, so
+   * a drag leaves the position exactly where it was anywhere in the chapter, and "the
+   * position did not move" alone would swap the chapter on every swipe. Until a stable
+   * "this is the chapter's last page" signal is confirmed on device, a drag must also look
+   * like it ran into the edge. The tap path needs no such gate: a tap at the edge is an
+   * explicit request, and the navigator answers it by moving or not.
    */
   private var lastProgression = 0.0
 
@@ -543,6 +555,47 @@ class NovellaReadiumView(context: Context, appContext: AppContext) : ExpoView(co
     }
   }
 
+  /**
+   * Identity of the navigator's current position, for asking whether a gesture moved it.
+   *
+   * The toolkit cannot answer that on its own. `goForward()`/`goBackward()` report the call
+   * as consumed even on a chapter's last page, where nothing moves, so their result cannot
+   * be trusted. `locations.progression` is no substitute either: a chapter's last page
+   * reports its first visible point — 0.91 for an eleven-page chapter, never 1.0 — which is
+   * the same reason the reader's slider stops short of 100%. Comparing two readings of the
+   * position is the only signal that held up on device.
+   */
+  private fun positionKey(locator: Locator?): String? = locator?.let {
+    "${it.href}#${it.locations.progression ?: -1.0}#${it.locations.position ?: -1}"
+  }
+
+  /**
+   * Reports a boundary once the navigator has had time to publish the locator a gesture
+   * produced. Reading it synchronously would misfire both ways: a navigator that publishes
+   * late looks stuck on every page turn, and one that animates a swipe still looks stuck
+   * when the finger lifts. Waiting only delays the chapter swap at a real boundary, which
+   * is imperceptible, and [BOUNDARY_DEBOUNCE_MS] stops a second gesture from reporting it
+   * twice.
+   */
+  private fun emitBoundaryAfterSettle(
+    mounted: EpubNavigatorFragment,
+    direction: String,
+    from: String?,
+  ) {
+    postDelayed({
+      if (navigator !== mounted) return@postDelayed
+      if (positionKey(mounted.currentLocator.value) != from) return@postDelayed
+      emitBoundary(direction)
+    }, BOUNDARY_SETTLE_MS)
+  }
+
+  private fun emitBoundary(direction: String) {
+    val now = System.currentTimeMillis()
+    if (now - lastBoundaryEventAt <= BOUNDARY_DEBOUNCE_MS) return
+    lastBoundaryEventAt = now
+    onBoundary(payload("direction" to direction))
+  }
+
   private val inputListener = object : InputListener {
     override fun onTap(event: TapEvent): Boolean {
       if (suppressNextTap) {
@@ -563,13 +616,21 @@ class NovellaReadiumView(context: Context, appContext: AppContext) : ExpoView(co
           }
           if (direction != null) {
             val animated = preferences?.get("pageAnimation") as? Boolean == true
+            val before = positionKey(mounted.currentLocator.value)
             val moved = if (direction == DIRECTION_PREVIOUS) {
               mounted.goBackward(animated = animated)
             } else {
               mounted.goForward(animated = animated)
             }
             // Could not turn the page: the chapter is over, so let JS swap in the next one.
-            if (!moved) onBoundary(payload("direction" to direction))
+            // The navigator's own "did not move" answer is not enough on its own, because
+            // it reports success at a chapter's edge too, so the position is checked as
+            // well — once now, and again once the navigator has had time to settle.
+            if (!moved) {
+              emitBoundary(direction)
+            } else if (positionKey(mounted.currentLocator.value) == before) {
+              emitBoundaryAfterSettle(mounted, direction, before)
+            }
             return true
           }
         }
@@ -580,16 +641,32 @@ class NovellaReadiumView(context: Context, appContext: AppContext) : ExpoView(co
 
     /**
      * Divergence from iOS: it resolves the boundary from the WebView scroll view's
-     * content offset. There is no scroll-offset query in 3.1.0, so a drag that runs the
-     * reading direction and happens while the locator sits at a chapter edge is treated as
-     * a chapter boundary. Passive on purpose — calling goForward here would advance the
-     * page a second time for a swipe the navigator already handled.
+     * content offset, which 3.1.0 does not expose. Here a drag that crosses a good part of
+     * the viewport and ends with the position exactly where it began is treated as running
+     * into the chapter's edge: the navigator had its chance to turn the page and did not.
+     *
+     * The position cannot be read here, only after the navigator settles, so the decision
+     * is deferred. Passive on purpose — calling goForward here would advance the page a
+     * second time for a swipe the navigator already handled.
      */
     override fun onDrag(event: DragEvent): Boolean {
-      if (event.type != DragEvent.Type.End) return false
+      if (event.type != DragEvent.Type.End) {
+        // Captured on Start, or on the first Move if the navigator skips Start.
+        if (locatorAtDragStart == null) {
+          locatorAtDragStart = positionKey(navigator?.currentLocator?.value)
+        }
+        return false
+      }
+      // Consume the snapshot either way, so the next gesture captures a fresh one.
+      val dragStart = locatorAtDragStart
+      locatorAtDragStart = null
+
+      val mounted = navigator ?: return false
+      val view = mounted.view ?: return false
       val horizontal = abs(event.offset.x) >= abs(event.offset.y)
       val primary = if (horizontal) event.offset.x else event.offset.y
-      if (abs(primary) < BOUNDARY_DRAG_THRESHOLD_PX) return false
+      val span = if (horizontal) view.width else view.height
+      if (span <= 0 || abs(primary) < span * BOUNDARY_DRAG_MIN_RATIO) return false
 
       val next = primary < 0
       val atEdge = if (next) {
@@ -599,10 +676,8 @@ class NovellaReadiumView(context: Context, appContext: AppContext) : ExpoView(co
       }
       if (!atEdge) return false
 
-      val now = System.currentTimeMillis()
-      if (now - lastBoundaryEventAt <= BOUNDARY_DEBOUNCE_MS) return false
-      lastBoundaryEventAt = now
-      onBoundary(payload("direction" to if (next) DIRECTION_NEXT else DIRECTION_PREVIOUS))
+      val direction = if (next) DIRECTION_NEXT else DIRECTION_PREVIOUS
+      emitBoundaryAfterSettle(mounted, direction, dragStart)
       return false
     }
 
@@ -643,7 +718,19 @@ class NovellaReadiumView(context: Context, appContext: AppContext) : ExpoView(co
     const val PAGE_TAP_EDGE_RATIO = 0.3
     const val TAP_SUPPRESSION_MS = 500L
     const val BOUNDARY_DEBOUNCE_MS = 350L
-    const val BOUNDARY_DRAG_THRESHOLD_PX = 40f
+    /** How long the navigator is given to publish the locator a gesture produced. */
+    const val BOUNDARY_SETTLE_MS = 500L
+    /**
+     * Fraction of the viewport a drag must cross before it counts as asking to leave the
+     * chapter. A shorter drag, which the navigator is right to ignore, must not read as an
+     * edge — otherwise every hesitant swipe would swap the chapter.
+     */
+    const val BOUNDARY_DRAG_MIN_RATIO = 0.25f
+    /**
+     * Progression a drag must reach before it counts as running into the chapter's edge.
+     * Only an approximation: a chapter's last page reports its first visible point (0.91
+     * for an eleven-page chapter), so this gate cannot be exact. The tap path needs no gate.
+     */
     const val CHAPTER_EDGE = 0.98
   }
 }
