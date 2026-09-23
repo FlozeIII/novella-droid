@@ -15,7 +15,6 @@ export const SERVICE_ENDPOINTS = Object.freeze({
   sendResetEmailPath: '/api/user/send_reset_email',
   resetPasswordPath: '/api/user/reset_password',
   refreshTokenPath: '/api/user/refresh_token',
-  publicUserSummaryPath: '/api/user/summary',
   signalRHub: 'https://api.lightnovel.life/hub/api',
 });
 
@@ -168,7 +167,7 @@ const sharedRequestScheduler = new RateLimitRequestScheduler();
 const BLURHASH_BASE83 =
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~';
 
-export const SHELF_STRUCT_VERSION = '20220211';
+export const SHELF_STRUCT_VERSION = '20260921';
 
 export interface ApiRequest extends Omit<HttpRequest, 'url'> {
   path: `/${string}`;
@@ -1484,7 +1483,7 @@ export class ApiClient {
       'SaveBookShelf',
       {
         data: shelf.items.map(encodeShelfItem),
-        ver: shelf.version ?? SHELF_STRUCT_VERSION,
+        ver: SHELF_STRUCT_VERSION,
       },
       () => undefined,
     );
@@ -1567,23 +1566,11 @@ export class ApiClient {
     if (!Number.isSafeInteger(userId) || userId <= 0) {
       throw new TypeError('A valid user id is required.');
     }
-    const response = await this.request<unknown>({
-      headers: { Accept: 'application/json' },
-      method: 'GET',
-      path: SERVICE_ENDPOINTS.publicUserSummaryPath,
-      query: { id: String(userId) },
-    });
-    if (response.status < 200 || response.status >= 300) {
-      throw new ApiError(
-        'Unable to load the public user profile.',
-        response.status === 401 ? 'auth' : 'server',
-        { status: response.status },
-      );
-    }
-    return decodePublicUserSummary(decodeSuccessfulResponse(
-      response.body,
-      'Unable to load the public user profile.',
-    ));
+    return this.invoke(
+      'GetUserSummary',
+      { UserId: userId },
+      decodePublicUserSummary,
+    );
   }
 
   resetInviteCode(): Promise<ResetInviteCodeResult> {
