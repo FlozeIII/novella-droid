@@ -2,15 +2,20 @@
 
 感谢你参与 Novella 的开发。本文档介绍项目的目录结构、移动端开发流程与代码约定，供贡献者参考。
 
+> 本仓库是 [celia-sh/Novella](https://github.com/celia-sh/Novella) 的 **Android 移植修改版**。
+> 移植背景、Android 构建约束与发布签名流程见 [README.md](README.md)。
+
 ## 项目结构
 
-- `apps/mobile`：React Native + Expo 移动端
-- `packages/*`：与平台无关的客户端核心与协议
+- `apps/mobile`：React Native + Expo 移动端（iOS 与 Android）
+- `apps/mobile/plugins`：Config Plugin，**Android 原生配置的唯一真相**（生成目录不可手改）
 - `apps/mobile/modules/novella-ui`：自定义 Expo 原生模块，封装 iOS UIKit/SwiftUI 组件，并与 `@expo/ui` 混合使用
+- `apps/mobile/modules/novella-readium`：Readium 阅读引擎的原生模块封装
+- `packages/*`：与平台无关的客户端核心与协议
 
 ## 移动端开发
 
-移动端基于 Expo Development Build 开发，仅支持 iOS。项目不使用 Expo Go，日常开发也不依赖 EAS Build。
+移动端基于 Expo Development Build 开发，支持 **iOS 与 Android**。项目不使用 Expo Go，日常开发也不依赖 EAS Build。
 
 Expo CLI 命令统一在 `apps/mobile` 目录下执行：
 
@@ -20,7 +25,9 @@ cd apps/mobile
 
 ### 首次构建
 
-首次运行前，或安装、修改了包含原生代码的依赖之后，需要重新编译并安装 Development Build：
+首次运行前，或安装、修改了包含原生代码的依赖之后，需要重新编译并安装 Development Build。
+
+iOS：
 
 ```bash
 npx expo run:ios
@@ -32,7 +39,15 @@ npx expo run:ios
 npx expo run:ios --device
 ```
 
-`expo run:ios` 会在需要时生成 iOS 原生工程、编译并安装应用到设备，然后启动 Metro。
+Android：
+
+```bash
+npx expo run:android
+```
+
+`expo run:ios` / `expo run:android` 会在需要时生成对应平台的原生工程、编译并安装应用到设备，然后启动 Metro。
+
+> Android 首次构建对工具链版本有要求，且部分版本经过刻意锁定，请先读 [README 的「Android 构建约束」](README.md#android-构建约束重要)。
 
 ### 日常开发
 
@@ -50,14 +65,35 @@ npx expo start --clear
 
 ### 重新生成原生工程
 
-修改了 Expo 配置、Config Plugin 或原生依赖后，如需彻底重新生成 iOS 工程：
+修改了 Expo 配置、Config Plugin 或原生依赖后，如需彻底重新生成原生工程。
+
+iOS：
 
 ```bash
 npx expo prebuild --clean --platform ios
 npx expo run:ios
 ```
 
-注意：`prebuild --clean` 会重建原生工程，尚未迁移到 Expo Module 或 Config Plugin 的手动原生修改会被覆盖，请勿将其保留在生成目录中。
+Android：
+
+```bash
+npx expo prebuild --clean --platform android
+npx expo run:android
+```
+
+注意：`prebuild --clean` 会重建原生工程，尚未迁移到 Expo Module 或 Config Plugin 的手动原生修改会被覆盖，请勿将其保留在生成目录中。**Android 侧尤其如此**——`apps/mobile/android/` 已 gitignore，所有原生配置都必须写进 `apps/mobile/plugins/` 的 Config Plugin。
+
+### Android 发布构建
+
+release 变体使用正式密钥签名，密钥库位于 `apps/mobile/.keystore/release.keystore`（已 gitignore），密码从环境变量 `NOVELLA_KEYSTORE_PASSWORD` 读取、不入库：
+
+```bash
+export NOVELLA_KEYSTORE_PASSWORD='<密码>'
+cd apps/mobile/android
+./gradlew assembleRelease
+```
+
+> ⚠️ 该密钥库是已发布应用的签名身份，**丢失后无法再推送更新**。仓库外必须单独备份，并保存密码与证书指纹以便校验恢复的是正确的密钥。
 
 ## 代码规范
 
@@ -67,7 +103,9 @@ npx expo run:ios
 
 - 优先复用共享组件（`NativeGroupedList`、`NativeIcon` 等），避免在每个页面中直接使用 `RNHostView`。
 - `apps/mobile` 的 TypeScript 与 Expo Module 源码直接使用 iOS 实现。
-- 项目采用 CNG（Continuous Native Generation）：`ios/` 为生成产物（已 gitignore）。原生配置应写入 `app.config.ts` 的 Config Plugin 或 Expo Module，不宜长期手改生成目录——`prebuild --clean --platform ios` 会覆盖这些改动。
+- 项目采用 CNG（Continuous Native Generation）：`ios/` 与 `android/` 均为生成产物（已 gitignore）。原生配置应写入 `app.config.ts` 的 Config Plugin 或 Expo Module，不宜长期手改生成目录——`prebuild --clean` 会覆盖这些改动。
+
+**关于 Android**：Android 目前是移植目标，而非设计基准——上文的 iOS 原生设计原则仍是本项目的设计目标。Android 侧的原生配置全部集中在 `apps/mobile/plugins/`；其中若干约束（Gradle 版本锁定、关闭新架构、单一 ABI、`targetSdk` 取值等）由实测得出且原因未必显见，**改动前请先读 README 的「Android 构建约束」**。
 
 ### 图标
 
@@ -102,4 +140,6 @@ npm run test:client  # 客户端核心测试
 npm run test:reader  # 阅读器相关测试
 ```
 
-提交 PR 前，请完成 iOS simulator/device 的功能回归；视觉和交互验收范围见任务文档。
+CI 还会从零重建 Android 原生工程并编译（`.github/workflows/android.yml`），用于确认 Config Plugin 仍然生效。
+
+提交 PR 前，请完成**受影响平台**的功能回归（iOS simulator/device，或 Android 真机/模拟器）；视觉和交互验收范围见任务文档。
