@@ -1,0 +1,160 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import {
+  ApiError,
+  type BookListPage,
+  type OnlineInfo,
+} from '@novella/api-client';
+
+import type { LibraryMessage } from '@/localization/locales/library';
+import { discovery } from '@/services/client';
+import { filterBooksByContentSettings } from '@/services/content-filter';
+import { HOME_BOOK_METADATA_PAGE_SIZE } from '@/services/book-grid-layout';
+import { useAppSettings } from '@/services/settings';
+
+export type DiscoverySectionState<T> =
+  | { status: 'loading'; data: null; error: null }
+  | { status: 'refreshing'; data: T; error: null }
+  | { status: 'ready'; data: T; error: null }
+  | { status: 'error'; data: T | null; error: LibraryMessage };
+
+interface DiscoveryState {
+  latestBooks: DiscoverySectionState<BookListPage>;
+  onlineInfo: DiscoverySectionState<OnlineInfo>;
+}
+
+type DiscoverySection = keyof DiscoveryState;
+
+const INITIAL_STATE: DiscoveryState = {
+  latestBooks: { status: 'loading', data: null, error: null },
+  onlineInfo: { status: 'loading', data: null, error: null },
+};
+
+export function useDiscovery() {
+  const settings = useAppSettings();
+  const [state, setState] = useState<DiscoveryState>(INITIAL_STATE);
+  const mounted = useRef(true);
+  const epochs = useRef<Record<DiscoverySection, number>>({
+    latestBooks: 0,
+    onlineInfo: 0,
+  });
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const loadLatestBooks = useCallback(async (preserveData = true) => {
+    const epoch = ++epochs.current.latestBooks;
+    setState((current) => ({
+      ...current,
+      latestBooks: beginLoad(current.latestBooks, preserveData),
+    }));
+    try {
+      // Flutter's home page requests a larger recent-updates page and then
+      // applies the same client-side content filter used by search/rankings.
+      // The backend only accepts the Japanese/AI flags; Level 6 is filtered
+      // locally. Keep this bounded catalog page larger than the phone preview
+      // so tablet grids can show two complete rows without loading covers.
+      const response = await discovery.loadBookListPage({
+        ignoreAI: settings.ignoreAI,
+        ignoreJapanese: settings.ignoreJapanese,
+        order: 'latest',
+        page: 1,
+        size: HOME_BOOK_METADATA_PAGE_SIZE,
+      });
+      const data = {
+        ...response,
+        items: filterBooksByContentSettings(response.items, {
+          ignoreAI: settings.ignoreAI,
+          ignoreJapanese: settings.ignoreJapanese,
+          ignoreLevel6: settings.ignoreLevel6,
+        }),
+      };
+      if (!mounted.current || epoch !== epochs.current.latestBooks) return;
+      setState((current) => ({
+        ...current,
+        latestBooks: { status: 'ready', data, error: null },
+      }));
+    } catch (error) {
+      if (!mounted.current || epoch !== epochs.current.latestBooks) return;
+      setState((current) => ({
+        ...current,
+        latestBooks: {
+          status: 'error',
+          data: current.latestBooks.data,
+          error: getDiscoveryErrorMessage(error),
+        },
+      }));
+    }
+  }, [settings.ignoreAI, settings.ignoreJapanese, settings.ignoreLevel6]);
+
+  const loadOnlineInfo = useCallback(async (preserveData = true) => {
+    const epoch = ++epochs.current.onlineInfo;
+    setState((current) => ({
+      ...current,
+      onlineInfo: beginLoad(current.onlineInfo, preserveData),
+    }));
+    try {
+      const data = await discovery.loadOnlineInfo();
+      if (!mounted.current || epoch !== epochs.current.onlineInfo) return;
+      setState((current) => ({
+        ...current,
+        onlineInfo: { status: 'ready', data, error: null },
+      }));
+    } catch (error) {
+      if (!mounted.current || epoch !== epochs.current.onlineInfo) return;
+      setState((current) => ({
+        ...current,
+        onlineInfo: {
+          status: 'error',
+          data: current.onlineInfo.data,
+          error: getDiscoveryErrorMessage(error),
+        },
+      }));
+    }
+  }, []);
+
+  const loadAll = useCallback(async (preserveData = true) => {
+    await Promise.allSettled([
+      loadLatestBooks(preserveData),
+      loadOnlineInfo(preserveData),
+    ]);
+  }, [loadLatestBooks, loadOnlineInfo]);
+
+  useEffect(() => {
+    void loadAll(false);
+  }, [loadAll]);
+
+  return {
+    isRefreshing: Object.values(state).some(
+      (section) => section.status === 'refreshing',
+    ),
+    latestBooks: state.latestBooks,
+    onlineInfo: state.onlineInfo,
+    reload: () => loadAll(true),
+    retryLatestBooks: () => loadLatestBooks(true),
+    retryOnlineInfo: () => loadOnlineInfo(true),
+  };
+}
+
+function beginLoad<T>(
+  current: DiscoverySectionState<T>,
+  preserveData: boolean,
+): DiscoverySectionState<T> {
+  if (preserveData && current.data !== null) {
+    return { status: 'refreshing', data: current.data, error: null };
+  }
+  return { status: 'loading', data: null, error: null };
+}
+
+function getDiscoveryErrorMessage(error: unknown): LibraryMessage {
+  if (error instanceof ApiError) {
+    if (error.category === 'auth') return { kind: 'key', key: 'errors.auth' };
+    if (error.category === 'network') return { kind: 'key', key: 'errors.network' };
+    return { kind: 'raw', text: error.message };
+  }
+  return { kind: 'key', key: 'errors.unexpected' };
+}

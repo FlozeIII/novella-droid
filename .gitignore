@@ -1,0 +1,89 @@
+# Operating system and editor files
+.DS_Store
+.Spotlight-V100
+.Trashes
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+
+# Node and package managers
+node_modules/
+.npm/
+.npmrc.local
+.pnpm-store/
+.yarn/
+.yarn-cache/
+*.log
+
+# Environment files and local secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# JavaScript build and test output
+dist/
+build/
+coverage/
+out/
+release/
+test-results/
+.cache/
+.tmp/
+.temp/
+*.tsbuildinfo
+
+# Expo and Metro
+.expo/
+.expo-shared/
+.metro/
+.metro-cache/
+apps/mobile/.expo/
+apps/mobile/android/
+apps/mobile/ios/
+
+# iOS local output
+**/build/
+**/Pods/
+**/DerivedData/
+**/*.p12
+**/*.mobileprovision
+**/*.cer
+
+# Electron artifacts
+apps/desktop/.vite/
+apps/desktop/dist-electron/
+apps/desktop/release/
+
+# Generated type and tool files
+*.generated.*
+*.map
+*.symbols
+
+# Local documentation and workspace tooling
+docs/
+.trellis/
+.agents/
+.codex/
+AGENTS.md
+/references/
+/.dart_tool/
+/.fvm/
+/.flutter-plugins-dependencies
+
+# Local agent session state
+.claude/
+
+# Scratch space and third-party material decompiled for reference
+/x/
+/r2k310/
+
+# Ad-hoc artifacts kept at the repository root
+screen-release.png
+
+# Stale local backups
+*.bak-*

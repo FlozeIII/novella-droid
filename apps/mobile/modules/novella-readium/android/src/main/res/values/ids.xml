@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    Fragments must be added to a FragmentManager by container id, so these need real
+    resource ids rather than generated ones: on restore the FragmentManager re-attaches
+    the saved fragment to the id recorded in its state, which a freshly generated id
+    would not match.
+
+    Two ids because there are two nested container views, and they belong to different
+    FragmentManagers. `host_container` lives in the ExpoView and is filled by the
+    activity's FragmentManager; `navigator_container` lives inside the host fragment's
+    own view and is filled by that fragment's childFragmentManager.
+  -->
+  <item name="novella_readium_host_container" type="id" />
+  <item name="novella_readium_navigator_container" type="id" />
+</resources>

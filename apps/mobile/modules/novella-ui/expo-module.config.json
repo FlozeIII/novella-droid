@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["NovellaUiModule"]
+  },
+  "android": {
+    "modules": ["sh.celia.novella.ui.NovellaUiModule"]
+  }
+}

@@ -1,0 +1,91 @@
+import type { TranslationShape } from '../resource-shape.ts';
+
+export const zhCNCommon = {
+  actions: {
+    back: '返回',
+    cancel: '取消',
+    clear: '清除',
+    close: '关闭',
+    confirm: '确定',
+    delete: '删除',
+    done: '完成',
+    download: '下载',
+    edit: '编辑',
+    next: '下一步',
+    previous: '上一步',
+    refresh: '刷新',
+    retry: '重试',
+    save: '保存',
+    share: '分享',
+  },
+  accessibility: {
+    back: '返回',
+    clearSearch: '清除搜索',
+    close: '关闭',
+    refresh: '刷新',
+    retry: '重试',
+  },
+  connection: {
+    reconnectingTitle: '正在重新连接',
+    reconnectingMessage: '连接恢复前，当前页面会保持等待。',
+    reconnectedTitle: '连接已恢复',
+    reconnectedMessage: '可以继续阅读了。',
+    sessionExpiredTitle: '登录状态已过期',
+    sessionExpiredMessage: '请重新登录后继续使用 Novella。',
+  },
+  realtime: {
+    growthUpdateTitle: '成长更新',
+    experienceDelta: '经验 {{value}}',
+    coinDelta: '金币 {{value}}',
+  },
+  states: {
+    loading: '正在加载',
+    unknownError: '操作失败，请重试。',
+    unavailable: '暂不可用',
+  },
+} as const;
+
+export const zhTWCommon: TranslationShape<typeof zhCNCommon> = {
+  actions: {
+    back: '返回',
+    cancel: '取消',
+    clear: '清除',
+    close: '關閉',
+    confirm: '確定',
+    delete: '刪除',
+    done: '完成',
+    download: '下載',
+    edit: '編輯',
+    next: '下一步',
+    previous: '上一步',
+    refresh: '重新整理',
+    retry: '重試',
+    save: '儲存',
+    share: '分享',
+  },
+  accessibility: {
+    back: '返回',
+    clearSearch: '清除搜尋',
+    close: '關閉',
+    refresh: '重新整理',
+    retry: '重試',
+  },
+  connection: {
+    reconnectingTitle: '正在重新連線',
+    reconnectingMessage: '連線恢復前，目前頁面會保持等待。',
+    reconnectedTitle: '連線已恢復',
+    reconnectedMessage: '可以繼續閱讀了。',
+    sessionExpiredTitle: '登入狀態已過期',
+    sessionExpiredMessage: '請重新登入後繼續使用 Novella。',
+  },
+  realtime: {
+    growthUpdateTitle: '成長更新',
+    experienceDelta: '經驗 {{value}}',
+    coinDelta: '金幣 {{value}}',
+  },
+  states: {
+    loading: '正在載入',
+    unknownError: '操作失敗，請重試。',
+    unavailable: '暫時無法使用',
+  },
+};

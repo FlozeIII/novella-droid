@@ -1,0 +1,42 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'maven-publish'
+
+group = 'sh.celia.novella'
+version = '0.1.0'
+
+def safeExtGet(prop, fallback) {
+  rootProject.ext.find(prop) ?: fallback
+}
+
+android {
+  namespace "sh.celia.novella.ui"
+  compileSdk = safeExtGet("compileSdkVersion", 35)
+
+  defaultConfig {
+    minSdk = safeExtGet("minSdkVersion", 24)
+    targetSdk = safeExtGet("targetSdkVersion", 35)
+  }
+
+  compileOptions {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = "17"
+  }
+
+  publishing {
+    singleVariant("release") {
+      withSourcesJar()
+    }
+  }
+}
+
+dependencies {
+  implementation project(':expo-modules-core')
+  implementation "androidx.appcompat:appcompat:${safeExtGet('androidxAppCompatVersion', '1.7.0')}"
+  implementation "com.google.android.material:material:${safeExtGet('materialVersion', '1.12.0')}"
+  implementation "androidx.core:core-ktx:${safeExtGet('androidxCoreKtxVersion', '1.13.1')}"
+}
