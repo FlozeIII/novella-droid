@@ -1,0 +1,118 @@
+name: Android build
+
+# Rebuilds the Android project from scratch and compiles it, so the config
+# plugins in apps/mobile/plugins/ stay honest: android/ is gitignored, so a
+# plugin regression would otherwise only surface on someone's machine when they
+# next run `expo prebuild`.
+#
+# Caveats worth knowing before relying on this job:
+# - The Windows MAX_PATH fix (CMAKE_OBJECT_PATH_MAX) cannot be exercised on
+#   Linux; this verifies plugin correctness and buildability, not path-length
+#   behaviour on Windows.
+# - The Aliyun/Tencent mirrors are injected by the plugins and therefore really
+#   are used here, which doubles as a check that the injection landed. If they
+#   ever prove slow or flaky from GitHub's runners, gate them behind an env var.
+# - Only the debug variant is built. Release would need the keystore and
+#   NOVELLA_KEYSTORE_PASSWORD as secrets; debug signs with the template's
+#   generated debug.keystore, so this needs no secrets at all.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Prebuild and assemble debug APK
+    runs-on: ubuntu-latest
+    # A cold build runs ~10 min locally; give plenty of headroom for a cold
+    # Gradle/NDK download on a fresh runner.
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # Gradle 8.13 + AGP 8.12 require JDK 17.
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Android SDK components
+        run: |
+          set -euo pipefail
+          sdk_manager="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$sdk_manager" ]; then
+            sdk_manager="$(command -v sdkmanager)"
+          fi
+          # `yes` is killed by SIGPIPE once sdkmanager exits, which pipefail would
+          # surface as a failure; the explicit install below is what must succeed.
+          yes | "$sdk_manager" --licenses > /dev/null 2>&1 || true
+          "$sdk_manager" \
+            "platforms;android-36" \
+            "build-tools;36.1.0" \
+            "ndk;27.1.12297006" \
+            "cmake;3.22.1"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Prebuild Android project
+        working-directory: apps/mobile
+        run: npx expo prebuild --clean --platform android --no-install
+
+      # Fail here, with a specific message, rather than deep inside Gradle if a
+      # config plugin silently stopped applying.
+      - name: Verify config plugins applied
+        working-directory: apps/mobile/android
+        run: |
+          set -euo pipefail
+          check() {
+            if ! grep -q -- "$2" "$1"; then
+              echo "::error file=$1::$1 is missing expected content: $2"
+              exit 1
+            fi
+          }
+          check build.gradle "maven.aliyun.com/repository/gradle-plugin"
+          check build.gradle "maven.aliyun.com/repository/jcenter"
+          check app/build.gradle "NOVELLA_KEYSTORE_PASSWORD"
+          check app/build.gradle "CMAKE_OBJECT_PATH_MAX=256"
+          check app/build.gradle "coreLibraryDesugaring"
+          check gradle/wrapper/gradle-wrapper.properties "gradle-8.13-bin.zip"
+          check gradle.properties "newArchEnabled=false"
+          check gradle.properties "reactNativeArchitectures=arm64-v8a"
+          check gradle.properties "android.compileSdkVersion=36"
+
+      - name: Assemble debug APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-debug-apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
