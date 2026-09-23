@@ -97,7 +97,7 @@ iOS 开发沿用上游流程，见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 - **Gradle 锁定 8.13。** Expo 模板自带 9.3.1，但本项目的 AGP/React Native 插件用到了 Gradle 9 移除的特性，9.x 无法构建。**升高前请先跑通完整构建。**
 - **关闭新架构（`newArchEnabled=false`）。** 项目的原生模块使用的是 legacy ViewManager API 而非 Fabric codegen。该开关已不在 `ExpoConfig` 中、prebuild 也不再管理，只能由 Config Plugin 写入。
-- **`targetSdk` 34 低于 `compileSdk` 36，这是刻意的。** 当年调整的原因未留档，**请勿随意调高**（涉及 Android 15 的强制边到边行为）。
+- **`targetSdk` 34 低于 `compileSdk` 36，这是刻意的，但原因未留档。** ⚠️ **不要**用「规避 Android 15 强制边到边」来解释它——该说法已查证**不成立**：`edgeToEdgeEnabled=true` 是 Expo SDK 57 的模板默认值，且 `styles.xml` 里状态栏/导航栏颜色本就是透明的，因此本应用在任何 targetSdk 下**都已经是边到边**，降到 34 并不能把它关掉。真实原因无法从现有记录还原，**调高前请先跑一次真机回归**。
 - **只构建 `arm64-v8a` 单一 ABI**（模板默认四个），以缩短原生编译时间。
 - **国内镜像。** Maven 走阿里云、Gradle 分发包走腾讯云，以免在 GFW 内解析依赖时长时间卡住。这些镜像是公开可达的，CI 也在用。
 - **Windows MAX_PATH。** codegen 生成的 C++ 源在 `node_modules/` 下路径很深，会超出 Windows 的 260 字符限制而让 ninja 失败。修复是把 CMake 的 `CMAKE_OBJECT_PATH_MAX` 提到 **256**（默认 250 会让哈希差一个字符而失效）。该值按当前工作区深度调校，**仓库移到明显更深的路径需重算**。
